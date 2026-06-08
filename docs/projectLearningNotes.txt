@@ -44,4 +44,42 @@
     * requirements.txt ; list of python packages needed for code to run/work
     * Dockerfile ; instructions for docker to package/run backend code later
 - requirements.txt ; is a python dependency list, instead of telling people what they need to install directly they can use the list to do it for them
-- 
+
+# add first backend dependencies 
+- FastAPI is a python framework we'll use to build the backend API 
+- an API is how the frontend, browser, or another program talks to your backend code 
+- Uvicorn is the server that actually runs the FastAPI app 
+- cat x displays the actual text eof a file into the CLI 
+
+# write first API route
+- a route is a URL path that triggers backend code
+- JSON is a common data format used by APIs, looks like {"x": "y"}
+- frontend and backend usually use JSON to communicate 
+- in python a decorator is a line that starts with @ and modifies/attaches behavior to the function below it 
+- FastAPI uses decorators to connect routes to functions
+ex: @app.get("/ping")
+        def ping():
+            return {"message": "pong"}
+When the backend receives GET /ping, run ping()
+- a FastAPI app object is the main backend application 
+- it is the thing that stores all your routes
+- need to create app, attach routes to app, run app with Uvicorn later 
+- from fastapi import FastAPI ; imports FastAPI into file 
+- app = FastAPI() creates a FastAPI variable, then connects routes to variable with @app.get("x")
+
+# running locally
+- this means running the app directly on computer instead of using docker 
+- helps us confirm code works 
+- to install everything use python3 -m pip install -r backend/requirements.txt
+- uvicorn runs the api app, from root run uvicorn backend.app.main:app --reload
+    - backend.app.main ; file path
+    - :app fast api app object inside the file 
+    - --reload ; restart automatically when code changes 
+- then open http://localhost:8000/health ; will see the json displayed 
+
+# updating .gitignore
+- .venv/ = local python environment 
+- __pycache__/ = python generated cache folders
+- *.pyc = compiled Python cache files
+- .DS_Store = macOS folder metadata junk
+- .env = real local secrets/config
