@@ -1,0 +1,21 @@
+## Notes in order
+
+# CLI
+- pwd ; print working directory--show path to current file/folder from root of device
+- cd ; change directory--cd x change directory from current into x directory, cd . go back a parent directory
+- mkdir x ; make a directory called x in the directory you are in
+
+# git
+- a version control software, tracks changes to a project over time
+- a repository or repo is a directory that git is tracking
+- git init ; start tracking this folder with git
+- git status ; shows the current state of the repo, what changed, what's untracked, what branch you're on, whether there is anything to commit 
+
+
+# main folders
+- a clean structure makes the project easier to understand, maintain, expand, debug, and show to employers 
+- main folders:
+    * backend: FastAPI server code
+    * frontend: react app later
+    * infra: docker, deployment, kubernetes, Terraform later
+    * docs: notes, architecture, security writeups later
