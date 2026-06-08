@@ -19,3 +19,29 @@
     * frontend: react app later
     * infra: docker, deployment, kubernetes, Terraform later
     * docs: notes, architecture, security writeups later
+- ls ; lists all folders and files from current directory (not hidden)
+
+# create starter files
+- README.md ; explains what the project is and how to run it 
+- .gitignore ; tells git which files not to track 
+- .env.example ; shows what environment variables the project needs without real secrets
+- docker-compose.yml ; will later tell docker how to run the backend and database together
+- touch x y z ; creates files x y and z in current directory
+- ls -a ; lists all files even hidden ones like .git (files starting with a dot are hidden)
+
+# making first commit 
+- you choose which files goes into a saved checkpoint this is called staging 
+- git add . ; this stages all current changes in a folder, . means everything in current folder
+- a commit is a saved checkpoint 
+- git commit -m "message" ; this creates a checkpoint with a message of your choice
+
+# creating backend skeleton
+- backend skeleton is the minimum folder/file setup needed before it actually does something
+- we want a clean structure before adding FastAPI code, database code, tests, docker
+- inside backend we want:
+    * app/ ; actual backend application code
+    * tests/ ; testing for the backend code
+    * requirements.txt ; list of python packages needed for code to run/work
+    * Dockerfile ; instructions for docker to package/run backend code later
+- requirements.txt ; is a python dependency list, instead of telling people what they need to install directly they can use the list to do it for them
+- 
