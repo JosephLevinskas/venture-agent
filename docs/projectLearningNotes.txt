@@ -152,3 +152,56 @@ because the old database data is stored in the volume. That is not a problem rig
 
 # add README
 - important because people may not read all the code and may want to know a TLDR about it and how to run/use it 
+
+# GitHub setup
+- remote is a named link from local git repo to online repo
+- remote is usually named origin since it is the default nickname for main repository 
+- git push origin main ; Push my local commits to the GitHub repo named origin.
+- git remote add origin x ; connects to the online github repo 
+- origin is the default nickname for the remote GitHub repo, not the repo itself.
+- git remote add origin ... saves the GitHub repo URL under the name origin,
+so your local repo knows where to push and pull.
+- push means sending local commits to branch 
+- git push -u origin main ; git push = send to remote repo ; -u remember this connection for future pushes
+; origin = remote repo nickname ; main = branch you are pushing to 
+
+# Day 1 summary 
+- Project root = main folder for everything.
+- backend/ = FastAPI code.
+- frontend/ = React later.
+- infra/ = Docker/deployment later.
+- docs/ = notes/docs.
+- git init = start Git tracking.
+- git status = check repo state.
+- git add . = stage changes.
+- git commit -m "..." = save checkpoint.
+- working tree clean = everything committed.
+- .venv/ = local Python environment.
+- requirements.txt = packages needed.
+- Commit requirements.txt, not .venv/.
+- FastAPI = backend API framework.
+- Uvicorn = runs FastAPI server.
+- /health = confirms backend is running.
+- /docs = automatic API docs.
+- Dockerfile = recipe to build image.
+- Image = packaged app.
+- Container = running image.
+- Docker daemon = Docker engine.
+- --host 0.0.0.0 = make app reachable outside container.
+- -p 8000:8000 = map Mac port to container port.
+- Docker Compose = runs multiple services together.
+- docker compose up --build = build/run app stack.
+- Postgres = database.
+- postgres:16 = official Postgres image.
+- Volume = keeps database data after container restarts.
+- .env = real local config/secrets, do not commit.
+- .env.example = safe template, commit this.
+- ${POSTGRES_USER} = read value from .env.
+- .gitignore = files Git should ignore.
+- Ignore .env, .venv/, caches, Mac junk.
+- README = project explanation + run instructions.
+- README must match actual project structure.
+- GitHub = online host for Git repo.
+- origin = nickname for GitHub remote.
+- git push -u origin main = upload commits to GitHub.
+- Final result: FastAPI + Docker + Compose + Postgres + GitHub all working.

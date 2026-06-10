@@ -1,10 +1,10 @@
-# Venture Agent
+# VentureAgent
 
 Short experimental project exploring autonomous/assistant agents and deployment patterns.
 
 ## Description
 
-`Venture Agent` is a small learning project that explores building a minimal backend API for an agent-style application, containerized deployment, and the developer workflow around iteration and documentation. The current codebase contains a minimal FastAPI backend and placeholders for frontend and infra.
+`VentureAgent` is a small learning project that explores building a minimal backend API for an agent-style application, containerized deployment, and the developer workflow around iteration and documentation. The current codebase contains a minimal FastAPI backend and placeholders for frontend and infra.
 
 ## What I'm learning
 
@@ -20,7 +20,7 @@ Short experimental project exploring autonomous/assistant agents and deployment 
 
 ## What I did today (Day 1)
 
-- Created repository skeleton with these top-level folders: `backend/`, `frontend/`, `infra/`, `docs/`, `tests/`.
+- Created repository skeleton with these top-level folders: `backend/`, `frontend/`, `infra/`, `docs/`.
 - Implemented a minimal FastAPI app at `backend/app/main.py` with a `/health` endpoint.
 - Added `backend/requirements.txt` listing `fastapi` and `uvicorn`.
 - Added a `Dockerfile` and `docker-compose.yml` placeholders for future containerized runs.
@@ -53,7 +53,7 @@ uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 3. Alternatively, build and run with Docker Compose (if Docker is installed):
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ## What site to visit
