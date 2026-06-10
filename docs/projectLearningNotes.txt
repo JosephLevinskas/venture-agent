@@ -117,3 +117,9 @@ so that docker can build the backend the same way every time
     - --rm delete the container after it stops 
     - -p 8000:8000 map your mac's port to the containers port
 - then open http://localhost:8000/health
+
+# Docker compose 
+- docker compose runs multiple containers together 
+- will have multiple containers so instead of running multiple run commands we can write a compose.yml to put them all together
+- docker compose up ; run containers together 
+- docker compose up --build 
