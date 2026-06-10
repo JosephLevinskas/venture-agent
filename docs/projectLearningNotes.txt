@@ -149,4 +149,6 @@ so that docker can build the backend the same way every time
 - thing: ${name} uses the name from .env for the value of thing in the yml while .env.example shows what kinds of values it needs 
 - If you already created the Postgres volume earlier, changing .env values later may not reset the database automatically, 
 because the old database data is stored in the volume. That is not a problem right now.
-- 
+
+# add README
+- important because people may not read all the code and may want to know a TLDR about it and how to run/use it 
