@@ -123,3 +123,30 @@ so that docker can build the backend the same way every time
 - will have multiple containers so instead of running multiple run commands we can write a compose.yml to put them all together
 - docker compose up ; run containers together 
 - docker compose up --build 
+
+# postgre SQL 
+- postgreSQL usually called postgres is the database we'll use
+- app needs a place to store data 
+- in docker compose each running thing is a service, backend is one and postgres is one 
+- we use the official docker image postgres:16 
+- using local dev values for postgres environment in compose, later we move them to .env.example 
+
+# add postgres volume
+- containers can be created and destroyed but sql data should persist so we use volume for that 
+- - postgres_data:/var/lib/postgresql/data stores postgres data in a volume called postgres_data
+
+# add depends_on
+- depends_on tells one service start this other service before me 
+
+# add database config to .env.example
+- .env.example = safe template showing what config variables the project needs
+- .env = real local values not committed 
+- config should describe the environment and code should describe the functionality they should not be put in the same place
+- .env is where you put secret data that should not be copied to git 
+
+# use .env values in docker compose 
+- variable substitution means docker compose can read values from .env and insert them into docker-compose.yml
+- thing: ${name} uses the name from .env for the value of thing in the yml while .env.example shows what kinds of values it needs 
+- If you already created the Postgres volume earlier, changing .env values later may not reset the database automatically, 
+because the old database data is stored in the volume. That is not a problem right now.
+- 
