@@ -99,7 +99,7 @@ so that docker can build the backend the same way every time
 - RUN executes a command while building the image ; RUN pip install -r requirements.txt 
 - CMD is the command that runs when the container starts ; CMD ["python", "-m", "uvicorn", "..."]
 - in docker 0.0.0.0 makes the FastAPI server reachable from all interfaces
-- COPY will see current folder as the working folder so use COPY .. to copy everything (app/main.py, tests/, requirements.txt)
+- COPY will see current folder as the working folder so use COPY . . to copy everything (app/main.py, tests/, requirements.txt)
 
 # Build backend docker image 
 - A docker image is a packaged image of your backend environment
@@ -205,3 +205,86 @@ so your local repo knows where to push and pull.
 - origin = nickname for GitHub remote.
 - git push -u origin main = upload commits to GitHub.
 - Final result: FastAPI + Docker + Compose + Postgres + GitHub all working.
+
+
+## Day 2
+
+# set goal and create work branch 
+- can the app store and manage data?
+- implement CRUD: create, read, update, destroy 
+- today we implement:
+    - POST /projects = create project 
+    - GET /projects = list projects 
+    - GET /projects/{id} = get specific project 
+    - PATCH /project/{id} = update project 
+    - DELETE /project/{id} = delete project 
+- create new branch with git checkout -b feature/projects-crud 
+- main is then the stable project and new feature/projects-crud is the messy new work so we can implement new features 
+without breaking the code/project 
+
+# add database dependencies 
+- SQLAlchemy is used to write python code that can interact with the database instead of writing raw SQL 
+- helps connect FastAPI to postgres cleanly
+- database driver is the package that lets python physically communicate with the database 
+- SQLAlchemy knows how to organize database work, psycopg2-binary lets python actually talk to Postgres
+- python-dotenv lets python read your .env values 
+
+# Database connection file
+- database URL is one string that tells your backend how to find Postgres
+- postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME
+- SQLAlchemy engine is the main connection object for the database 
+- engine = backend's connection manager to postgres
+- engine = connection setup 
+- session = one working conversation with the database 
+- when someone calls POST /projects, FastAPI opens a session, creates the project, saves it, then closes the session.
+- Base is the parent class for your database model 
+- class Project(base):    ; this python class should become a database model 
+- database.py is how does FastAPI connect to Postgres 
+    - the pipe from python to postgres 
+- import os is a built in python module .env is outside your code and os needs to read it for the URL
+- load_dotenv() load variables from current .env file into python environment 
+- os.getenv("DATABASE_URL") will get the value of the url from the .env file 
+- create_engine() creates the engine, main object to know what database am i talking to 
+- the engine will be made from the database url 
+- Declarative base is the base class our object will inherit from later 
+- sessionmaker creates reusable session factory, engine = database connection setup, session = temporary work session for one request 
+- engine knows how to create connections when session needs them so its like a manager of session to the database 
+- raise ; stop the program and show this error 
+- RunTimeError ; something went wrong while program was running 
+- DATABASE_URL = address to the database, engine = SQLAlchemy object that knows how to connect there
+- SessionLocal = thing that creates sessions
+- SessionLocal() = one actual session
+- Base is the parent class for future database models 
+- get_db ; open a database session, give it to the route, close it after the route is done
+- try: do this ; yield: return value but don't end function ; finally: do cleanup after 
+- docker-compose down -v ; -v deletes the volumes 
+
+# create project model 
+- A SQLAlchemy model is a Python class that maps to a database table.
+- __tablename__ = "projects" means map this object to a table called projects 
+- A primary key is the unique identifier for each row.
+
+# create the actual table 
+- Base.metadata is SQLAlchemy’s collection of all table information it knows about.
+- create_all means make all known tables in the connected database 
+- from app import models forces python to load models.py so SQLAlchemy sees Project(Base)
+- Base contains model/table metadata, engine binds to the correct database 
+- docker compose exec postgres psql -U postgres -d venture_agent ; Run a command inside the running postgres container.
+- psql is the Postgres terminal client.
+- \dt show me the tables in this database 
+- \d projects ; show me the structure of the projects table
+- \q to quit 
+- Base.metadata.create_all(bind=engine) ; Look at all classes that inherited from Base, Create their tables if they do not already exist
+
+# pydantic shcema 
+- A Pydantic schema defines the shape of data going into and out of your API.
+- SQLAlchemy models inherit from SQLAlchemy Base
+- Pydantic schemas inherit from Pydantic BaseModel
+- ProjectBase = common project API fields
+- a FastAPI router is a way to group related routes 
+- projects.py = all project-related API routes keeps project cleaner 
+- router = APIRouter() makes a route group
+- db.add() add to database or stage
+- db.commit() save the changes 
+- HTTPException lets your API return a real HTTP error.
+- 
