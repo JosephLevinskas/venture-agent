@@ -1,4 +1,6 @@
-## Notes in order
+### Notes in order
+
+## Day 1
 
 # CLI
 - pwd ; print working directory--show path to current file/folder from root of device
@@ -83,3 +85,35 @@ When the backend receives GET /ping, run ping()
 - *.pyc = compiled Python cache files
 - .DS_Store = macOS folder metadata junk
 - .env = real local secrets/config
+
+# starting backend Dockerfile
+- a dockerfile is a recipe for build a docker image
+- a docker image is a packaged version of your app environment 
+- instead of saying to install python, then these requirements, then run with this command the dockerfile writes those steps down
+so that docker can build the backend the same way every time
+
+# Docker file instructions 
+- FROM choose the base environment ; FROM python:3.12-slim 
+- WORKDIR sets the folder inside the container where where commands will run ; WORKDIR /app
+- COPY move files from your computer into container image ; COPY requirements.txt 
+- RUN executes a command while building the image ; RUN pip install -r requirements.txt 
+- CMD is the command that runs when the container starts ; CMD ["python", "-m", "uvicorn", "..."]
+- in docker 0.0.0.0 makes the FastAPI server reachable from all interfaces
+- COPY will see current folder as the working folder so use COPY .. to copy everything (app/main.py, tests/, requirements.txt)
+
+# Build backend docker image 
+- A docker image is a packaged image of your backend environment
+    - Python + installed dependencies + your backend code + startup command 
+- use docker build -t venture-agent-backend ./backend
+    - docker build creates an image from a docker file 
+    - -t venture-agent-backend names the image 
+    - ./backend use the backend folder as the build context 
+- docker daemon is the engine that needs to run to use and build docker images 
+
+# run the backend container 
+- dockerfile = recipe, image = packaged app, container = the app actually running 
+- docker run ; starts the container from an image
+    - docker run --rm -p 8000:8000 venture-agent-backend 
+    - --rm delete the container after it stops 
+    - -p 8000:8000 map your mac's port to the containers port
+- then open http://localhost:8000/health
