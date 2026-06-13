@@ -41,3 +41,25 @@ class UserRead(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class DocumentBase(BaseModel):
+    title: str
+    content: str
+
+
+class DocumentCreate(DocumentBase):
+    pass
+
+
+class DocumentRead(DocumentBase):
+    id: int
+    project_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None

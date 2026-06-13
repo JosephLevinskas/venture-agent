@@ -1,39 +1,51 @@
 # VentureAgent
 
-`VentureAgent` is a full-stack AI research agent project. The goal is to build a backend-first application that can manage research projects, store documents/notes, and later use retrieval, embeddings, and LLMs to generate structured research reports.
+`VentureAgent` is a full-stack AI research agent project. The goal is to build a backend-first application that can manage research projects, store documents/notes, and later use retrieval, embeddings, vector search, and LLMs to generate structured research reports.
 
-This repo is being built as a 14-day project sprint to learn backend engineering, databases, Docker, authentication, full-stack development, testing, CI, and deployment patterns.
+This repo is being built as a 14-day project sprint to learn backend engineering, databases, Docker, authentication, migrations, testing, full-stack development, CI, and deployment patterns.
 
 ---
 
 ## Current Status
 
-Day 1, Day 2, Day 3, and Day 4 are complete.
+The backend is complete through the current Day 5 milestone.
+
+Completed so far:
+
+* Day 1: project setup, FastAPI backend, Docker, Docker Compose, PostgreSQL.
+* Day 2: project CRUD with SQLAlchemy and Pydantic.
+* Day 3: authentication basics with users, password hashing, login, JWTs, and `/auth/me`.
+* Day 4 backend ownership work: user-owned projects and protected project routes.
+* Day 5 backend work: Alembic migrations and documents/notes attached to projects.
+
+Important note:
+
+* The original sprint planned React + TypeScript frontend basics for Day 4.
+* The backend is ahead in some areas because Alembic and documents are now implemented.
+* The frontend is still pending and should be the next catch-up milestone.
 
 The project currently has:
 
 * A FastAPI backend.
-* A PostgreSQL database running through Docker Compose.
-* SQLAlchemy database setup.
-* A working `User` database model.
-* A working `Project` database model.
-* A foreign-key relationship from projects to users.
-* Pydantic schemas for request/response validation.
+* PostgreSQL running through Docker Compose.
+* SQLAlchemy models.
+* Alembic database migrations.
+* A working `User` model.
+* A working `Project` model.
+* A working `Document` model.
 * User registration and login.
 * Password hashing with Argon2.
 * JWT access token creation and decoding.
 * A reusable `get_current_user` dependency.
 * Protected project CRUD routes.
-* User-owned projects, meaning each project belongs to the logged-in user.
+* User-owned projects.
+* Protected document/note routes.
+* Documents attached to projects.
+* Ownership checks so users cannot access another user's projects or documents.
 * Automated backend tests with `pytest` and FastAPI `TestClient`.
 * Swagger/OpenAPI docs available at `/docs`.
 
 No frontend has been implemented yet.
-
-Important current limitation:
-
-* Alembic migrations are not implemented yet.
-* During development, schema changes may require resetting the local Postgres volume with `docker compose down -v`.
 
 ---
 
@@ -45,6 +57,7 @@ Important current limitation:
 * FastAPI
 * Uvicorn
 * SQLAlchemy
+* Alembic
 * Pydantic
 * psycopg2-binary
 * python-dotenv
@@ -55,6 +68,7 @@ Important current limitation:
 
 * PostgreSQL 16
 * Docker volume for persistent database storage
+* Alembic for schema migrations
 
 ### Testing
 
@@ -70,12 +84,13 @@ Important current limitation:
 
 ### Planned Later
 
-* Alembic database migrations
 * React + TypeScript frontend
-* Document storage
+* Document upload support
+* Chunking
 * Embeddings / vector search
 * RAG question answering
-* Research memo generation
+* Structured research memo generation
+* Agent-style workflow
 * GitHub Actions CI
 * Deployment
 * Kubernetes / Terraform basics
@@ -87,6 +102,12 @@ Important current limitation:
 ```txt
 venture-agent/
 ├── backend/
+│   ├── alembic/
+│   │   ├── env.py
+│   │   ├── script.py.mako
+│   │   └── versions/
+│   │       ├── b7f820c358cc_create_users_and_projects.py
+│   │       └── 707473e937cc_add_documents.py
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── database.py
@@ -97,15 +118,18 @@ venture-agent/
 │   │   └── routers/
 │   │       ├── __init__.py
 │   │       ├── auth.py
-│   │       └── projects.py
+│   │       ├── projects.py
+│   │       └── documents.py
 │   ├── tests/
 │   │   ├── test_api.py
-│   │   └── test_day4_project_ownership.py
+│   │   ├── test_day4_project_ownership.py
+│   │   └── test_day5_documents.py
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 ├── infra/
 ├── docs/
+├── alembic.ini
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
@@ -145,17 +169,9 @@ Completed:
 
 * Added `.env`, `.env.example`, and `.gitignore`.
 
-* Learned the difference between:
-
-  * Dockerfile
-  * Docker image
-  * Docker container
-  * Docker Compose service
-  * Docker volume
-
 * Verified the backend could run locally and through Docker.
 
-The initial health endpoint:
+The health endpoint:
 
 ```txt
 GET /health
@@ -175,7 +191,7 @@ returns:
 
 Day 2 focused on making the backend store and manage real data.
 
-The first real domain object is `Project`.
+The first real domain object was `Project`.
 
 A project is the top-level object because future documents, chunks, reports, scores, and AI outputs will belong to a project.
 
@@ -257,7 +273,7 @@ Completed:
 
 * Added `User` SQLAlchemy model.
 
-* Created `users` table in PostgreSQL.
+* Created `users` table.
 
 * Added Pydantic schemas:
 
@@ -378,6 +394,100 @@ This means users can only see, update, and delete their own projects.
 
 ---
 
+## What I Built on Day 5
+
+Day 5 focused on database migrations and documents/notes attached to projects.
+
+Completed:
+
+* Added Alembic.
+* Initialized Alembic in:
+
+```txt
+backend/alembic/
+```
+
+* Configured Alembic to read the app's SQLAlchemy metadata.
+* Configured Alembic to read `DATABASE_URL` from `.env`.
+* Commented out `Base.metadata.create_all(bind=engine)` in `main.py`.
+* Created the initial migration:
+
+```txt
+create users and projects
+```
+
+* Applied the initial migration with:
+
+```bash
+.venv/bin/alembic upgrade head
+```
+
+* Verified the `alembic_version` table in Postgres.
+
+* Added a `Document` SQLAlchemy model.
+
+* Added a foreign key from `documents.project_id` to `projects.id`.
+
+* Added SQLAlchemy relationships:
+
+  * `Project.documents`
+  * `Document.project`
+
+* Added document schemas:
+
+  * `DocumentBase`
+  * `DocumentCreate`
+  * `DocumentRead`
+  * `DocumentUpdate`
+
+* Added document routes:
+
+```txt
+POST   /projects/{project_id}/documents
+GET    /projects/{project_id}/documents
+GET    /documents/{document_id}
+PATCH  /documents/{document_id}
+DELETE /documents/{document_id}
+```
+
+* Created and applied the Alembic migration:
+
+```txt
+add documents
+```
+
+* Verified the `documents` table in Postgres.
+* Added tests for:
+
+  * document routes requiring authentication
+  * creating documents on owned projects
+  * preventing document creation on another user's project
+  * listing documents only for owned projects
+  * getting documents only as the project owner
+  * updating documents only as the project owner
+  * deleting documents only as the project owner
+  * deleting attached documents when a project is deleted
+
+### Current Document Ownership Flow
+
+Documents do not store their own `owner_id`.
+
+Instead, ownership is inherited through the project:
+
+```txt
+User -> Project -> Document
+```
+
+The API checks document access by following:
+
+```txt
+document.project.owner_id == current_user.id
+```
+
+This means users can only access documents attached to projects they own.
+
+---
+
 ## API Endpoints
 
 ### Health Check
@@ -481,7 +591,7 @@ Example response:
 
 ## Project API
 
-All project routes now require authentication.
+All project routes require authentication.
 
 Each request must include:
 
@@ -533,33 +643,12 @@ GET /projects
 
 Returns only projects owned by the current logged-in user.
 
-Example response:
-
-```json
-[
-  {
-    "title": "First Research Project",
-    "description": "Testing project creation through the API",
-    "id": 1,
-    "owner_id": 1,
-    "created_at": "2026-06-13T17:00:00Z",
-    "updated_at": "2026-06-13T17:00:00Z"
-  }
-]
-```
-
 ---
 
 ### Get One Project
 
 ```txt
 GET /projects/{project_id}
-```
-
-Example:
-
-```txt
-GET /projects/1
 ```
 
 If the project exists and belongs to the current user, it returns that project.
@@ -590,7 +679,7 @@ Example request:
 }
 ```
 
-This route supports partial updates, so the caller can update only `title`, only `description`, or both.
+This route supports partial updates.
 
 Only the project owner can update the project.
 
@@ -611,6 +700,128 @@ Example response:
 ```
 
 Only the project owner can delete the project.
+
+Deleting a project also deletes attached documents.
+
+---
+
+## Document API
+
+All document routes require authentication.
+
+Documents are scoped through their parent project.
+
+Each request must include:
+
+```txt
+Authorization: Bearer <access_token>
+```
+
+---
+
+### Create Document
+
+```txt
+POST /projects/{project_id}/documents
+```
+
+Example request:
+
+```json
+{
+  "title": "Research Note 1",
+  "content": "These are my notes for this project."
+}
+```
+
+Example response:
+
+```json
+{
+  "id": 1,
+  "project_id": 1,
+  "title": "Research Note 1",
+  "content": "These are my notes for this project.",
+  "created_at": "2026-06-13T17:00:00Z",
+  "updated_at": "2026-06-13T17:00:00Z"
+}
+```
+
+Only the project owner can create documents for that project.
+
+---
+
+### List Documents for a Project
+
+```txt
+GET /projects/{project_id}/documents
+```
+
+Returns only documents for a project owned by the current user.
+
+If the project belongs to another user, the API returns:
+
+```json
+{
+  "detail": "Project not found"
+}
+```
+
+---
+
+### Get One Document
+
+```txt
+GET /documents/{document_id}
+```
+
+If the document exists and belongs to a project owned by the current user, it returns the document.
+
+If the document does not exist or belongs to another user's project, it returns:
+
+```json
+{
+  "detail": "Document not found"
+}
+```
+
+---
+
+### Update Document
+
+```txt
+PATCH /documents/{document_id}
+```
+
+Example request:
+
+```json
+{
+  "title": "Updated Research Note"
+}
+```
+
+This route supports partial updates.
+
+Only the owner of the parent project can update the document.
+
+---
+
+### Delete Document
+
+```txt
+DELETE /documents/{document_id}
+```
+
+Example response:
+
+```json
+{
+  "message": "Document deleted successfully"
+}
+```
+
+Only the owner of the parent project can delete the document.
 
 ---
 
@@ -646,7 +857,7 @@ POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=venture_agent
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/venture_agent
-SECRET_KEY=change_me_to_a_long_random_secret
+SECRET_KEY=change_me_to_a_long_random_secret_at_least_32_bytes
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
@@ -657,23 +868,22 @@ Do not commit `.env`.
 
 ## Running with Docker Compose
 
-Start the backend and Postgres:
+Start Postgres:
 
 ```bash
-docker compose up -d --build
+docker compose up -d postgres
 ```
 
-Check running containers:
+Apply database migrations:
 
 ```bash
-docker compose ps
+.venv/bin/alembic upgrade head
 ```
 
-Expected services:
+Run the backend locally:
 
-```txt
-backend
-postgres
+```bash
+PYTHONPATH=backend .venv/bin/uvicorn app.main:app --reload
 ```
 
 The backend should be available at:
@@ -696,29 +906,36 @@ http://localhost:8000/health
 
 ---
 
-## Running the Backend Locally Without Docker
+## Running Backend and Postgres Fully Through Docker Compose
 
-Postgres should still be running through Docker Compose:
-
-```bash
-docker compose up -d postgres
-```
-
-Then run the backend locally from the project root:
+Start all services:
 
 ```bash
-PYTHONPATH=backend .venv/bin/uvicorn app.main:app --reload
+docker compose up -d --build
 ```
 
-Why `PYTHONPATH=backend` is needed:
+Check running containers:
 
-The backend code imports modules like:
-
-```python
-from app.database import Base
+```bash
+docker compose ps
 ```
 
-So Python needs to know that `backend/` is the folder where the `app` package lives.
+Expected services:
+
+```txt
+backend
+postgres
+```
+
+Note:
+
+Because migrations are now handled by Alembic, the database should be migrated with:
+
+```bash
+.venv/bin/alembic upgrade head
+```
+
+before relying on the app against a fresh database.
 
 ---
 
@@ -748,6 +965,12 @@ Current test coverage includes:
 * private project lists
 * owner-only get/update/delete behavior
 * SQLAlchemy user-project relationships
+* protected document routes
+* document creation on owned projects
+* blocked document creation on another user's project
+* private document lists
+* owner-only document get/update/delete behavior
+* cascade delete from project to documents
 
 ---
 
@@ -785,13 +1008,6 @@ Inside Docker Compose, the backend container talks to Postgres using the Compose
 postgres:5432
 ```
 
-That is configured in `docker-compose.yml` under the backend service:
-
-```yaml
-environment:
-  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-```
-
 Important idea:
 
 ```txt
@@ -800,6 +1016,50 @@ Docker backend uses:    postgres:5432
 ```
 
 Both point to the same Postgres database, but from different network locations.
+
+---
+
+## Alembic Migration Workflow
+
+Alembic now owns database schema changes.
+
+The app no longer uses:
+
+```python
+Base.metadata.create_all(bind=engine)
+```
+
+Normal migration workflow:
+
+```bash
+.venv/bin/alembic revision --autogenerate -m "describe schema change"
+.venv/bin/alembic upgrade head
+```
+
+Check current database migration version:
+
+```bash
+.venv/bin/alembic current
+```
+
+View migration history:
+
+```bash
+.venv/bin/alembic history
+```
+
+Downgrade one migration:
+
+```bash
+.venv/bin/alembic downgrade -1
+```
+
+Current migrations:
+
+```txt
+b7f820c358cc_create_users_and_projects.py
+707473e937cc_add_documents.py
+```
 
 ---
 
@@ -821,6 +1081,8 @@ Important constraints:
 * `email` is unique.
 * `hashed_password` stores the Argon2 password hash.
 
+---
+
 ### projects
 
 ```txt
@@ -841,7 +1103,7 @@ Important constraints:
 Relationship:
 
 ```txt
-users.id  ->  projects.owner_id
+users.id -> projects.owner_id
 ```
 
 Meaning:
@@ -853,12 +1115,68 @@ Each project belongs to one user.
 
 ---
 
+### documents
+
+```txt
+id
+project_id
+title
+content
+created_at
+updated_at
+```
+
+Important constraints:
+
+* `id` is the primary key.
+* `project_id` is required.
+* `project_id` is a foreign key to `projects.id`.
+
+Relationship:
+
+```txt
+projects.id -> documents.project_id
+```
+
+Meaning:
+
+```txt
+One project can have many documents.
+Each document belongs to one project.
+```
+
+---
+
 ## Useful Commands
+
+Start Postgres:
+
+```bash
+docker compose up -d postgres
+```
 
 Start all services:
 
 ```bash
 docker compose up -d --build
+```
+
+Apply migrations:
+
+```bash
+.venv/bin/alembic upgrade head
+```
+
+Check current migration:
+
+```bash
+.venv/bin/alembic current
+```
+
+Create a new migration:
+
+```bash
+.venv/bin/alembic revision --autogenerate -m "message"
 ```
 
 Stop services:
@@ -899,16 +1217,18 @@ Inside `psql`, list tables:
 \dt
 ```
 
-Describe the projects table:
-
-```sql
-\d projects
-```
-
-Describe the users table:
+Describe tables:
 
 ```sql
 \d users
+\d projects
+\d documents
+```
+
+Check Alembic version:
+
+```sql
+SELECT * FROM alembic_version;
 ```
 
 Check project ownership with a join:
@@ -920,6 +1240,20 @@ SELECT
   projects.owner_id,
   users.email
 FROM projects
+JOIN users ON projects.owner_id = users.id;
+```
+
+Check document ownership through projects:
+
+```sql
+SELECT
+  documents.id,
+  documents.title,
+  documents.project_id,
+  projects.title AS project_title,
+  users.email AS owner_email
+FROM documents
+JOIN projects ON documents.project_id = projects.id
 JOIN users ON projects.owner_id = users.id;
 ```
 
@@ -980,26 +1314,42 @@ curl "http://localhost:8000/projects" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### Get One Project
+### Create a Document
 
 ```bash
-curl "http://localhost:8000/projects/1" \
+curl -X POST "http://localhost:8000/projects/1/documents" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title":"Research Note","content":"These are my notes."}'
+```
+
+### List Documents for a Project
+
+```bash
+curl "http://localhost:8000/projects/1/documents" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### Update a Project
+### Get One Document
 
 ```bash
-curl -X PATCH "http://localhost:8000/projects/1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"title":"Updated title"}'
+curl "http://localhost:8000/documents/1" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-### Delete a Project
+### Update a Document
 
 ```bash
-curl -X DELETE "http://localhost:8000/projects/1" \
+curl -X PATCH "http://localhost:8000/documents/1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title":"Updated Note Title"}'
+```
+
+### Delete a Document
+
+```bash
+curl -X DELETE "http://localhost:8000/documents/1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1015,14 +1365,21 @@ If it is okay to delete local database data, reset with:
 
 ```bash
 docker compose down -v
-docker compose up -d --build
+docker compose up -d postgres
+.venv/bin/alembic upgrade head
 ```
 
 ### `DATABASE_URL is not set`
 
-The backend container needs its own `DATABASE_URL` in `docker-compose.yml`.
+The backend and Alembic need `DATABASE_URL`.
 
-Make sure the backend service has:
+Make sure `.env` includes:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/venture_agent
+```
+
+For Docker backend service networking, the backend container may need:
 
 ```yaml
 environment:
@@ -1039,10 +1396,10 @@ Check:
 docker compose ps
 ```
 
-Then start services:
+Then start Postgres:
 
 ```bash
-docker compose up -d
+docker compose up -d postgres
 ```
 
 ### Route exists in file but not in `/docs`
@@ -1050,33 +1407,32 @@ docker compose up -d
 Make sure the router is included in `main.py`:
 
 ```python
-from app.routers import projects
-
-app.include_router(projects.router)
-```
-
-For auth routes, make sure `auth` is also included:
-
-```python
-from app.routers import auth
+from app.routers import auth, projects, documents
 
 app.include_router(auth.router)
+app.include_router(projects.router)
+app.include_router(documents.router)
 ```
 
 ### `column projects.owner_id does not exist`
 
-This means the Python model has changed, but the existing Postgres table has not.
+This means the database has not been migrated.
 
-Because Alembic migrations are not implemented yet, reset the dev database:
+Run:
 
 ```bash
-docker compose down -v
-docker compose up -d postgres
+.venv/bin/alembic upgrade head
 ```
 
-Then restart the backend so tables are recreated.
+### `relation "documents" does not exist`
 
-Warning: this deletes local database data.
+This means the documents migration has not been applied.
+
+Run:
+
+```bash
+.venv/bin/alembic upgrade head
+```
 
 ---
 
@@ -1101,31 +1457,40 @@ This project is teaching:
 * How bearer tokens protect API routes.
 * How authenticated routes use the current user.
 * How authorization differs from authentication.
+* How database migrations work.
+* Why `create_all()` is not enough for real projects.
+* How Alembic tracks schema versions.
 * How to write backend tests with pytest and TestClient.
+* How to protect nested resources like documents through parent ownership.
 * How to build CRUD routes step by step.
 
 ---
 
 ## Next Steps
 
-Day 5 will add database migrations.
+Immediate next milestone:
 
-Planned Day 5 work:
+* Add the React + TypeScript frontend MVP that was originally planned for Day 4.
 
-* Add Alembic.
-* Initialize migrations.
-* Create the first migration for the current schema.
-* Learn why `create_all()` is not enough for real projects.
-* Learn how to upgrade and downgrade database schema versions.
-* Remove the need to reset the Postgres volume for every model change.
+Frontend MVP should support:
 
-Later milestones:
+* Register.
+* Login.
+* Store JWT token.
+* Create projects.
+* List current user's projects.
+* Create notes/documents under a selected project.
+* List documents for a selected project.
 
-* React + TypeScript frontend.
-* Document upload/notes system.
-* Chunking and embeddings.
-* RAG search over project documents.
-* AI-generated research memos.
+Upcoming backend milestones:
+
+* Chunking documents.
+* Embeddings.
+* Vector storage.
+* RAG Q&A with evidence.
+* Structured research memo generator.
+* Agent-style workflow.
 * GitHub Actions CI.
-* Deployment.
+* Docker polish and deployment.
+* Security scanning/docs/audit logs.
 * Kubernetes and Terraform basics.
