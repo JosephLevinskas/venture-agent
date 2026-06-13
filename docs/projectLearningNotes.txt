@@ -1,0 +1,414 @@
+# VentureAgent Simple Notes
+
+# Project Goal
+- VentureAgent is a full-stack AI research agent.
+- Users create research projects.
+- Projects can have documents/notes.
+- Later: chunk documents, create embeddings, search with RAG, generate research reports.
+- Current backend is ahead of frontend.
+- Frontend is still not built yet.
+
+# Current Stack
+- FastAPI = backend API framework.
+- Uvicorn = runs the FastAPI app.
+- PostgreSQL = main database.
+- SQLAlchemy = Python ORM for database models/queries.
+- psycopg2-binary = Postgres driver SQLAlchemy uses.
+- Pydantic = request/response validation.
+- python-dotenv = loads .env values.
+- Docker = containerizes services.
+- Docker Compose = runs backend + Postgres together.
+- pwdlib[argon2] = password hashing.
+- PyJWT = JWT creation/decoding.
+- Alembic = database migrations.
+- pytest = backend tests.
+- TestClient = tests FastAPI routes.
+
+# Important Project Structure
+- backend/app/main.py = creates FastAPI app and includes routers.
+- backend/app/database.py = engine, SessionLocal, Base, get_db.
+- backend/app/models.py = SQLAlchemy database models.
+- backend/app/schemas.py = Pydantic request/response schemas.
+- backend/app/security.py = password hashing and JWT helpers.
+- backend/app/dependencies.py = reusable get_current_user.
+- backend/app/routers/auth.py = auth routes.
+- backend/app/routers/projects.py = project routes.
+- backend/app/routers/documents.py = document/note routes.
+- backend/tests/ = backend tests.
+- backend/alembic/ = migration setup.
+- backend/alembic/versions/ = migration files.
+- alembic.ini = Alembic config.
+- docker-compose.yml = backend/Postgres services.
+- .env = real local config, do not commit.
+- .env.example = safe template, commit this.
+
+# Day 1 Key Facts
+- Created backend, frontend, infra, docs folders.
+- Created FastAPI backend.
+- Added GET /health.
+- Added Dockerfile.
+- Added docker-compose.yml.
+- Added Postgres service.
+- Added persistent Postgres volume.
+- Added .env and .env.example.
+- Pushed repo to GitHub.
+
+# Day 1 Useful Commands
+- pwd = show current folder.
+- ls = list files.
+- ls -a = list hidden files too.
+- cd folder = move into folder.
+- cd .. = move up one folder.
+- mkdir backend frontend infra docs = create folders.
+- touch file.txt = create empty file.
+- cat file.txt = print file contents.
+- python3 -m venv .venv = create virtual environment.
+- source .venv/bin/activate = activate virtual environment.
+- pip install -r backend/requirements.txt = install backend dependencies.
+- docker compose up -d --build = start services in background.
+- docker compose ps = show running services.
+- docker compose down = stop services.
+- docker compose down -v = stop services and delete database volume.
+
+# Git Commands
+- git status = see changed files.
+- git add . = stage all changes.
+- git add file = stage one file.
+- git commit -m "message" = save checkpoint.
+- git push = push commits to GitHub.
+- git checkout -b branch-name = create and switch to new branch.
+- git checkout main = switch to main.
+- git merge branch-name = merge branch into current branch.
+- working tree clean = everything is committed.
+
+# Docker Mental Model
+- Dockerfile = recipe.
+- Docker image = packaged app environment.
+- Docker container = running image.
+- Docker Compose = runs multiple services together.
+- Docker volume = persistent storage outside container.
+- backend service = FastAPI app.
+- postgres service = database.
+- depends_on starts Postgres before backend, but does not guarantee Postgres is fully ready.
+
+# Local vs Docker Database URLs
+- Local Mac Python connects to Postgres through mapped host port.
+- Local DATABASE_URL = postgresql://postgres:postgres@127.0.0.1:5433/venture_agent
+- Docker backend connects by Compose service name.
+- Docker DATABASE_URL = postgresql://postgres:postgres@postgres:5432/venture_agent
+- 127.0.0.1 inside a container means that same container, not your Mac.
+- postgres:5432 works inside Docker Compose because postgres is the service name.
+
+# Day 2 Key Facts
+- Added SQLAlchemy database setup.
+- Added Project model.
+- Added project schemas.
+- Added project CRUD routes.
+- CRUD = create, read, update, delete.
+- Project is the top-level object.
+- Future documents, chunks, reports, and AI outputs belong to projects.
+
+# SQLAlchemy Key Facts
+- SQLAlchemy model = database table shape.
+- Pydantic schema = API input/output shape.
+- Base = parent class for models.
+- engine = database connection manager.
+- SessionLocal = creates database sessions.
+- session = one temporary conversation with the database.
+- get_db() opens session, yields it, then closes it.
+- yield gives db to route and continues later for cleanup.
+- db.add() stages a new row.
+- db.commit() saves changes.
+- db.refresh() reloads database-generated values like id.
+- db.delete() deletes a row.
+- .all() returns all matching rows.
+- .first() returns first match or None.
+- HTTPException returns API errors.
+- exclude_unset=True prevents PATCH from overwriting missing fields with None.
+
+# Day 2 Project Routes
+- POST /projects = create project.
+- GET /projects = list projects.
+- GET /projects/{project_id} = get one project.
+- PATCH /projects/{project_id} = update project.
+- DELETE /projects/{project_id} = delete project.
+
+# Pydantic Schema Reminders
+- ProjectCreate = request body for creating.
+- ProjectRead = response body for returning.
+- ProjectUpdate = request body for PATCH.
+- model_config = ConfigDict(from_attributes=True) lets Pydantic read SQLAlchemy objects.
+- Response schemas should not expose private fields.
+
+# Day 3 Key Facts
+- Added User model.
+- Added users table.
+- Added password hashing.
+- Added auth routes.
+- Added JWT creation/decoding.
+- Added get_current_user.
+- Added /auth/me.
+- Added auth tests.
+
+# Auth Routes
+- POST /auth/register = create user.
+- POST /auth/login = return JWT token.
+- GET /auth/me = return logged-in user.
+
+# Password Rules
+- Never store plain passwords.
+- Store hashed_password only.
+- Never return password or hashed_password from API.
+- Register flow: plain password -> hash -> store hash.
+- Login flow: submitted password + stored hash -> verify true/false.
+
+# JWT Rules
+- JWT = signed login token.
+- SECRET_KEY signs tokens.
+- Do not commit real SECRET_KEY.
+- HS256 should use a long secret key, at least 32 bytes.
+- access_token goes in Authorization header.
+- Header format: Authorization: Bearer <token>.
+- Token payload currently uses sub=email.
+- exp means expiration time.
+- decode_access_token verifies signature and expiration.
+- Invalid/expired/fake token should fail.
+
+# get_current_user
+- Reads bearer token from Authorization header.
+- Decodes JWT.
+- Gets email from token subject.
+- Loads user from database.
+- Returns current user.
+- Protected route uses current_user: models.User = Depends(get_current_user).
+
+# Auth vs Authorization
+- Authentication = who are you?
+- Authorization = are you allowed to access this thing?
+- JWT solves authentication.
+- owner_id checks solve authorization.
+
+# Day 4 Key Facts
+- Connected projects to users.
+- Added owner_id to Project.
+- Added foreign key projects.owner_id -> users.id.
+- Added User.projects relationship.
+- Added Project.owner relationship.
+- Protected all project routes.
+- Users only see their own projects.
+- Users cannot get/update/delete other users' projects.
+- Added tests for user-owned project behavior.
+
+# User-Owned Project Rules
+- Project.owner_id stores the user id of the owner.
+- Project.owner_id points to users.id.
+- Frontend should not send owner_id.
+- Backend sets owner_id = current_user.id.
+- GET /projects filters by Project.owner_id == current_user.id.
+- GET/PATCH/DELETE by id also filter by owner_id.
+- Return 404 for another user's project to avoid revealing private data exists.
+
+# Relationship Reminders
+- ForeignKey is database-level connection.
+- relationship() is Python-side convenience.
+- Project.owner gives the User object.
+- User.projects gives that user's projects.
+- back_populates names must match on both sides.
+
+# Day 5A Alembic Key Facts
+- Alembic is now used for database migrations.
+- Migrations are versioned database schema changes.
+- Alembic replaced app startup create_all().
+- main.py should not run Base.metadata.create_all(bind=engine).
+- Tests still call create_all() for temporary SQLite test database.
+- Alembic reads Base.metadata from app.database.
+- Importing models in env.py registers tables with Base.metadata.
+- alembic_version table tracks current database migration.
+- Current initial migration created users and projects.
+- Second migration added documents.
+
+# Alembic Commands
+- .venv/bin/alembic current = show current DB migration.
+- .venv/bin/alembic history = show migration history.
+- .venv/bin/alembic revision --autogenerate -m "message" = create migration from model changes.
+- .venv/bin/alembic upgrade head = apply latest migrations.
+- .venv/bin/alembic downgrade -1 = undo one migration.
+- Always inspect autogenerated migration before upgrade.
+- Autogenerate compares SQLAlchemy models to current database schema.
+- If DB already has the table, initial autogenerate may look empty.
+- For first migration, we reset dev DB once so Alembic compared models to empty DB.
+
+# Current Migrations
+- b7f820c358cc_create_users_and_projects.py
+- 707473e937cc_add_documents.py
+
+# Day 5B Documents Key Facts
+- Added Document model.
+- Documents are notes attached to projects.
+- Document fields: id, project_id, title, content, created_at, updated_at.
+- documents.project_id points to projects.id.
+- Project.documents relationship added.
+- Document.project relationship added.
+- Documents do not need owner_id directly.
+- Document ownership comes through project ownership.
+- Ownership chain: User -> Project -> Document.
+- To check document access: document.project.owner_id == current_user.id.
+
+# Document Routes
+- POST /projects/{project_id}/documents = create document under project.
+- GET /projects/{project_id}/documents = list project documents.
+- GET /documents/{document_id} = get one document.
+- PATCH /documents/{document_id} = update document.
+- DELETE /documents/{document_id} = delete document.
+
+# Document Security Rules
+- All document routes require auth.
+- User can only create documents on projects they own.
+- User can only list documents for projects they own.
+- User can only get/update/delete documents attached to their own projects.
+- For single document routes, use join Document -> Project to check owner.
+- Return 404 for another user's document.
+
+# Cascade Delete
+- Project.documents uses cascade="all, delete-orphan".
+- If a project is deleted, attached documents should be deleted too.
+- This prevents orphan documents.
+
+# psql Commands
+- docker compose exec postgres psql -U postgres -d venture_agent = open Postgres shell.
+- \l = list databases.
+- \dt = list tables.
+- \d users = describe users table.
+- \d projects = describe projects table.
+- \d documents = describe documents table.
+- SELECT * FROM alembic_version; = show current migration.
+- \q = quit psql.
+- q = exit pager when stuck at (END).
+
+# Useful SQL Checks
+- SELECT * FROM users;
+- SELECT * FROM projects;
+- SELECT * FROM documents;
+- SELECT projects.id, projects.title, projects.owner_id, users.email FROM projects JOIN users ON projects.owner_id = users.id;
+- SELECT documents.id, documents.title, projects.title, users.email FROM documents JOIN projects ON documents.project_id = projects.id JOIN users ON projects.owner_id = users.id;
+
+# Testing Reminders
+- Run all tests: PYTHONPATH=backend .venv/bin/pytest backend/tests -q
+- Tests use temporary SQLite.
+- Tests set DATABASE_URL before importing app.
+- Tests reset tables before each test.
+- Test env should set SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES.
+- Current tests cover auth, project CRUD, user-owned projects, documents, and ownership security.
+- If tests fail, read the first failure first.
+
+# Current Passing Tests Cover
+- GET /health.
+- Project CRUD.
+- Register user.
+- Duplicate email fails.
+- Password stored hashed.
+- Login returns JWT.
+- Wrong password fails.
+- Missing user fails.
+- /auth/me with token.
+- /auth/me without token.
+- Project routes require auth.
+- Projects belong to logged-in user.
+- Users only list their own projects.
+- Users cannot get/update/delete other users' projects.
+- Document routes require auth.
+- Documents attach to owned projects.
+- Users cannot attach documents to other users' projects.
+- Users only list documents for owned projects.
+- Users cannot get/update/delete other users' documents.
+- Deleting project deletes attached documents.
+
+# Important Backend Run Commands
+- docker compose up -d postgres = start database only.
+- .venv/bin/alembic upgrade head = apply migrations.
+- PYTHONPATH=backend .venv/bin/uvicorn app.main:app --reload = run backend locally.
+- Open API docs at http://127.0.0.1:8000/docs.
+- Open health check at http://127.0.0.1:8000/health.
+
+# Important Docker Commands
+- docker compose up -d --build = start all services.
+- docker compose ps = check services.
+- docker compose logs backend --tail=80 = backend logs.
+- docker compose logs postgres --tail=80 = Postgres logs.
+- docker compose down = stop services.
+- docker compose down -v = stop services and delete DB volume.
+- Only use docker compose down -v when okay losing local DB data.
+
+# Example Auth Curl Flow
+- Register: curl -X POST "http://localhost:8000/auth/register" -H "Content-Type: application/json" -d '{"email":"joe@example.com","password":"password123"}'
+- Login: curl -X POST "http://localhost:8000/auth/login" -H "Content-Type: application/json" -d '{"email":"joe@example.com","password":"password123"}'
+- Save token: TOKEN="paste_access_token_here"
+- Me: curl "http://localhost:8000/auth/me" -H "Authorization: Bearer $TOKEN"
+
+# Example Project Curl Flow
+- Create project: curl -X POST "http://localhost:8000/projects" -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"title":"My project","description":"notes"}'
+- List projects: curl "http://localhost:8000/projects" -H "Authorization: Bearer $TOKEN"
+- Update project: curl -X PATCH "http://localhost:8000/projects/1" -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"title":"Updated title"}'
+- Delete project: curl -X DELETE "http://localhost:8000/projects/1" -H "Authorization: Bearer $TOKEN"
+
+# Example Document Curl Flow
+- Create document: curl -X POST "http://localhost:8000/projects/1/documents" -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"title":"Research Note","content":"These are my notes."}'
+- List documents: curl "http://localhost:8000/projects/1/documents" -H "Authorization: Bearer $TOKEN"
+- Get document: curl "http://localhost:8000/documents/1" -H "Authorization: Bearer $TOKEN"
+- Update document: curl -X PATCH "http://localhost:8000/documents/1" -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"title":"Updated Note"}'
+- Delete document: curl -X DELETE "http://localhost:8000/documents/1" -H "Authorization: Bearer $TOKEN"
+
+# Common Errors
+- DATABASE_URL is not set = .env missing or not loaded.
+- connection refused = Postgres probably not running.
+- password authentication failed = old Postgres volume credentials or wrong .env.
+- column projects.owner_id does not exist = migrations not applied or old DB.
+- relation documents does not exist = documents migration not applied.
+- route not in /docs = router not included in main.py.
+- ModuleNotFoundError for app = run with PYTHONPATH=backend.
+
+# Fixes
+- Start DB: docker compose up -d postgres.
+- Apply migrations: .venv/bin/alembic upgrade head.
+- Check current migration: .venv/bin/alembic current.
+- Check tables: docker compose exec postgres psql -U postgres -d venture_agent then \dt.
+- Run tests: PYTHONPATH=backend .venv/bin/pytest backend/tests -q.
+- Fix import path: use PYTHONPATH=backend.
+- If local dev DB is totally broken and data does not matter: docker compose down -v then docker compose up -d postgres then .venv/bin/alembic upgrade head.
+
+# Implementation Rules To Remember
+- Keep .env out of Git.
+- Keep .env.example in Git.
+- Do not commit .venv.
+- Do not commit __pycache__.
+- Do not return passwords or hashed_password.
+- Frontend should never send owner_id.
+- Backend should use current_user.id for ownership.
+- Use 404 for private resources owned by someone else.
+- Inspect Alembic migrations before applying them.
+- After model changes: create migration, inspect it, upgrade head, run tests.
+- Do not use create_all() in app startup now that Alembic exists.
+- Tests can still use create_all() on temporary SQLite.
+- Commit after each clean milestone.
+
+# Current Status
+- Backend through Day 5 is working.
+- Auth works.
+- User-owned projects work.
+- Alembic migrations work.
+- Documents/notes attached to projects work.
+- Tests pass.
+- React frontend is still pending.
+- Next catch-up task: React + TypeScript frontend MVP.
+
+# Next Frontend MVP
+- Create React + TypeScript app in frontend.
+- Add CORS to FastAPI.
+- Register from frontend.
+- Login from frontend.
+- Store JWT token.
+- Create project.
+- List current user's projects.
+- Select project.
+- Create document/note under project.
+- List documents for selected project.
