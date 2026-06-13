@@ -12,13 +12,20 @@ type Project = {
   updated_at: string;
 };
 
-type Document = {
+type ProjectDocument = {
   id: number;
   project_id: number;
   title: string;
   content: string;
   created_at: string;
   updated_at: string;
+};
+
+type NoticeType = "success" | "error" | "info";
+
+type Notice = {
+  type: NoticeType;
+  text: string;
 };
 
 function App() {
@@ -32,59 +39,82 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
 
   const [projectTitle, setProjectTitle] = useState("Frontend Test Project");
   const [projectDescription, setProjectDescription] = useState("Created from React");
 
   const [documentTitle, setDocumentTitle] = useState("Research Note");
-  const [documentContent, setDocumentContent] = useState("These are notes for this project.");
+  const [documentContent, setDocumentContent] = useState(
+    "These are notes for this project."
+  );
 
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  const selectedDocument = documents.find(
+    (document) => document.id === selectedDocumentId
+  );
+
+  function showNotice(text: string, type: NoticeType = "info") {
+    setNotice({ text, type });
+  }
 
   async function registerUser() {
-    setMessage("");
+    setIsBusy(true);
+    setNotice(null);
 
-    const response = await fetch(`${API_BASE}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      setMessage(`Register failed: ${error.detail}`);
-      return;
+      if (!response.ok) {
+        const error = await response.json();
+        showNotice(`Register failed: ${error.detail}`, "error");
+        return;
+      }
+
+      showNotice("Account created. Now log in.", "success");
+    } finally {
+      setIsBusy(false);
     }
-
-    setMessage("Registered successfully. Now log in.");
   }
 
   async function loginUser() {
-    setMessage("");
+    setIsBusy(true);
+    setNotice(null);
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      setMessage(`Login failed: ${error.detail}`);
-      return;
+      if (!response.ok) {
+        const error = await response.json();
+        showNotice(`Login failed: ${error.detail}`, "error");
+        return;
+      }
+
+      const data = await response.json();
+
+      localStorage.setItem("access_token", data.access_token);
+      setToken(data.access_token);
+
+      showNotice(`Logged in as ${email}.`, "success");
+    } finally {
+      setIsBusy(false);
     }
-
-    const data = await response.json();
-
-    localStorage.setItem("access_token", data.access_token);
-    setToken(data.access_token);
-
-    setMessage("Logged in successfully.");
   }
 
   function logoutUser() {
@@ -93,12 +123,13 @@ function App() {
     setProjects([]);
     setDocuments([]);
     setSelectedProjectId(null);
-    setMessage("Logged out.");
+    setSelectedDocumentId(null);
+    showNotice("Logged out.", "info");
   }
 
   async function loadProjects() {
     if (!token) {
-      setMessage("Log in first.");
+      showNotice("Log in first.", "error");
       return;
     }
 
@@ -109,49 +140,69 @@ function App() {
     });
 
     if (!response.ok) {
-      setMessage("Failed to load projects.");
+      showNotice("Failed to load projects.", "error");
       return;
     }
 
     const data = await response.json();
     setProjects(data);
+
+    showNotice(`Loaded ${data.length} project(s).`, "success");
   }
 
   async function createProject() {
     if (!token) {
-      setMessage("Log in first.");
+      showNotice("Log in first.", "error");
       return;
     }
 
-    const response = await fetch(`${API_BASE}/projects`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: projectTitle,
-        description: projectDescription,
-      }),
-    });
+    setIsBusy(true);
 
-    if (!response.ok) {
-      setMessage("Failed to create project.");
-      return;
+    try {
+      const response = await fetch(`${API_BASE}/projects`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: projectTitle,
+          description: projectDescription,
+        }),
+      });
+
+      if (!response.ok) {
+        showNotice("Failed to create project.", "error");
+        return;
+      }
+
+      const createdProject = await response.json();
+
+      await loadProjects();
+      setSelectedProjectId(createdProject.id);
+      setSelectedDocumentId(null);
+      setDocuments([]);
+
+      showNotice(`Project created and selected: ${createdProject.title}`, "success");
+    } finally {
+      setIsBusy(false);
     }
-
-    setMessage("Project created.");
-    await loadProjects();
   }
 
   async function selectProject(projectId: number) {
+    const project = projects.find((item) => item.id === projectId);
+
     setSelectedProjectId(projectId);
+    setSelectedDocumentId(null);
+
+    showNotice(`Selected project: ${project?.title ?? projectId}`, "info");
+
     await loadDocuments(projectId);
   }
 
   async function loadDocuments(projectId: number) {
     if (!token) {
-      setMessage("Log in first.");
+      showNotice("Log in first.", "error");
       return;
     }
 
@@ -162,47 +213,71 @@ function App() {
     });
 
     if (!response.ok) {
-      setMessage("Failed to load documents.");
+      showNotice("Failed to load documents.", "error");
       return;
     }
 
     const data = await response.json();
     setDocuments(data);
+
+    if (data.length === 0) {
+      showNotice("No documents found for this project yet.", "info");
+    } else {
+      showNotice(`Loaded ${data.length} document(s).`, "success");
+    }
   }
 
   async function createDocument() {
     if (!token) {
-      setMessage("Log in first.");
+      showNotice("Log in first.", "error");
       return;
     }
 
     if (selectedProjectId === null) {
-      setMessage("Select a project first.");
+      showNotice("Select a project first.", "error");
       return;
     }
 
-    const response = await fetch(`${API_BASE}/projects/${selectedProjectId}/documents`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: documentTitle,
-        content: documentContent,
-      }),
-    });
+    setIsBusy(true);
 
-    if (!response.ok) {
-      setMessage("Failed to create document.");
-      return;
+    try {
+      const response = await fetch(
+        `${API_BASE}/projects/${selectedProjectId}/documents`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: documentTitle,
+            content: documentContent,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        showNotice("Failed to create document.", "error");
+        return;
+      }
+
+      const createdDocument = await response.json();
+
+      await loadDocuments(selectedProjectId);
+      setSelectedDocumentId(createdDocument.id);
+
+      showNotice(`Document created and selected: ${createdDocument.title}`, "success");
+    } finally {
+      setIsBusy(false);
     }
-
-    setMessage("Document created.");
-    await loadDocuments(selectedProjectId);
   }
 
-  const selectedProject = projects.find((project) => project.id === selectedProjectId);
+  function selectDocument(documentId: number) {
+    const document = documents.find((item) => item.id === documentId);
+
+    setSelectedDocumentId(documentId);
+    showNotice(`Selected document: ${document?.title ?? documentId}`, "info");
+  }
 
   useEffect(() => {
     if (token) {
@@ -213,12 +288,30 @@ function App() {
   return (
     <main className="page">
       <section className="hero">
-        <h1>VentureAgent</h1>
-        <p>Frontend MVP: auth, projects, and project documents.</p>
+        <div>
+          <h1>VentureAgent</h1>
+          <p>Frontend MVP: auth, projects, and project documents.</p>
+        </div>
+
+        <div className={token ? "status-pill success" : "status-pill muted"}>
+          {token ? "Logged in" : "Not logged in"}
+        </div>
       </section>
 
+      {notice && (
+        <section className={`notice ${notice.type}`}>
+          <strong>{notice.type.toUpperCase()}</strong>
+          <span>{notice.text}</span>
+        </section>
+      )}
+
       <section className="card">
-        <h2>Auth</h2>
+        <div className="card-header">
+          <h2>Auth</h2>
+          <span className={token ? "mini-badge success" : "mini-badge"}>
+            {token ? `Signed in as ${email}` : "No active session"}
+          </span>
+        </div>
 
         <label>
           Email
@@ -238,18 +331,27 @@ function App() {
         </label>
 
         <div className="button-row">
-          <button onClick={registerUser}>Register</button>
-          <button onClick={loginUser}>Login</button>
-          <button onClick={logoutUser}>Logout</button>
+          <button disabled={isBusy} onClick={registerUser}>
+            Register
+          </button>
+          <button disabled={isBusy} onClick={loginUser}>
+            Login
+          </button>
+          <button disabled={isBusy} onClick={logoutUser}>
+            Logout
+          </button>
         </div>
-
-        <p>
-          Status: <strong>{token ? "Logged in" : "Not logged in"}</strong>
-        </p>
       </section>
 
       <section className="card">
-        <h2>Create Project</h2>
+        <div className="card-header">
+          <h2>Create Project</h2>
+          {selectedProject && (
+            <span className="mini-badge success">
+              Selected: {selectedProject.title}
+            </span>
+          )}
+        </div>
 
         <label>
           Title
@@ -267,28 +369,51 @@ function App() {
           />
         </label>
 
-        <button onClick={createProject}>Create Project</button>
+        <button disabled={isBusy} onClick={createProject}>
+          Create Project
+        </button>
       </section>
 
       <section className="card">
-        <h2>Your Projects</h2>
+        <div className="card-header">
+          <h2>Your Projects</h2>
+          <span className="mini-badge">{projects.length} project(s)</span>
+        </div>
 
-        <button onClick={loadProjects}>Refresh Projects</button>
+        <button disabled={isBusy} onClick={loadProjects}>
+          Refresh Projects
+        </button>
 
         {projects.length === 0 ? (
-          <p>No projects loaded yet.</p>
+          <p className="empty-state">No projects loaded yet.</p>
         ) : (
           <ul className="project-list">
             {projects.map((project) => (
-              <li key={project.id} className="project-item">
-                <h3>{project.title}</h3>
+              <li
+                key={project.id}
+                className={
+                  project.id === selectedProjectId
+                    ? "project-item selected"
+                    : "project-item"
+                }
+              >
+                <div className="item-top">
+                  <h3>{project.title}</h3>
+                  {project.id === selectedProjectId && (
+                    <span className="selected-label">Selected</span>
+                  )}
+                </div>
+
                 <p>{project.description}</p>
+
                 <small>
                   project id: {project.id} | owner id: {project.owner_id}
                 </small>
+
                 <br />
-                <button onClick={() => selectProject(project.id)}>
-                  Select Project
+
+                <button disabled={isBusy} onClick={() => selectProject(project.id)}>
+                  {project.id === selectedProjectId ? "Selected" : "Select Project"}
                 </button>
               </li>
             ))}
@@ -297,19 +422,16 @@ function App() {
       </section>
 
       <section className="card">
-        <h2>Selected Project</h2>
-
-        {selectedProject ? (
-          <p>
-            Selected: <strong>{selectedProject.title}</strong>
-          </p>
-        ) : (
-          <p>No project selected.</p>
-        )}
-      </section>
-
-      <section className="card">
-        <h2>Create Document / Note</h2>
+        <div className="card-header">
+          <h2>Create Document / Note</h2>
+          {selectedProject ? (
+            <span className="mini-badge success">
+              Adding to: {selectedProject.title}
+            </span>
+          ) : (
+            <span className="mini-badge warning">Select project first</span>
+          )}
+        </div>
 
         <label>
           Title
@@ -327,36 +449,85 @@ function App() {
           />
         </label>
 
-        <button onClick={createDocument}>Create Document</button>
+        <button disabled={isBusy} onClick={createDocument}>
+          Create Document
+        </button>
       </section>
 
       <section className="card">
-        <h2>Documents for Selected Project</h2>
+        <div className="card-header">
+          <h2>Documents for Selected Project</h2>
+          <span className="mini-badge">{documents.length} document(s)</span>
+        </div>
 
-        {selectedProjectId !== null && (
-          <button onClick={() => loadDocuments(selectedProjectId)}>
+        {selectedProjectId !== null ? (
+          <button disabled={isBusy} onClick={() => loadDocuments(selectedProjectId)}>
             Refresh Documents
           </button>
+        ) : (
+          <p className="empty-state">Select a project to view its documents.</p>
         )}
 
-        {documents.length === 0 ? (
-          <p>No documents loaded yet.</p>
-        ) : (
+        {documents.length > 0 && (
           <ul className="document-list">
             {documents.map((document) => (
-              <li key={document.id} className="document-item">
-                <h3>{document.title}</h3>
-                <p>{document.content}</p>
+              <li
+                key={document.id}
+                className={
+                  document.id === selectedDocumentId
+                    ? "document-item selected"
+                    : "document-item"
+                }
+              >
+                <div className="item-top">
+                  <h3>{document.title}</h3>
+                  {document.id === selectedDocumentId && (
+                    <span className="selected-label">Viewing</span>
+                  )}
+                </div>
+
+                <p>{document.content.slice(0, 120)}</p>
+
                 <small>
                   document id: {document.id} | project id: {document.project_id}
                 </small>
+
+                <br />
+
+                <button disabled={isBusy} onClick={() => selectDocument(document.id)}>
+                  {document.id === selectedDocumentId
+                    ? "Viewing Document"
+                    : "View Document"}
+                </button>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      {message && <p className="message">{message}</p>}
+      <section className="card viewer-card">
+        <div className="card-header">
+          <h2>Document Viewer</h2>
+          {selectedDocument && (
+            <span className="mini-badge success">Open document</span>
+          )}
+        </div>
+
+        {selectedDocument ? (
+          <article>
+            <h3>{selectedDocument.title}</h3>
+            <p className="document-content">{selectedDocument.content}</p>
+            <small>
+              document id: {selectedDocument.id} | project id:{" "}
+              {selectedDocument.project_id}
+            </small>
+          </article>
+        ) : (
+          <p className="empty-state">
+            Click “View Document” on a document to read its full content here.
+          </p>
+        )}
+      </section>
     </main>
   );
 }
