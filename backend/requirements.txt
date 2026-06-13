@@ -7,3 +7,4 @@ pwdlib[argon2] # used for password hashing
 PyJWT # for JWT tokens 
 httpx2 # required by starlette TestClient
 pytest # test runner
+alembic # for database migrations
