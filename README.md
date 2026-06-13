@@ -6,7 +6,7 @@ This repo is being built as a 14-day project sprint to learn backend engineering
 
 ## Current Status
 
-Day 1 and Day 2 are complete.
+Day 1, Day 2, and Day 3 are complete.
 
 The project currently has:
 
@@ -48,7 +48,7 @@ No frontend has been implemented yet.
 ### Planned Later
 
 * React + TypeScript frontend
-* Authentication with JWT
+* Authentication with JWT (basic implemented)
 * Document storage
 * Embeddings / vector search
 * RAG question answering
@@ -333,7 +333,54 @@ Example response:
 }
 ```
 
----
+
+## Day 3 — Authentication Basics
+
+Added basic user authentication support.
+
+### Completed
+
+- Added `User` SQLAlchemy model.
+- Created `users` table in PostgreSQL.
+- Added Pydantic schemas:
+	- `UserCreate`
+	- `UserLogin`
+	- `UserRead`
+	- `Token`
+- Added password hashing with `pwdlib[argon2]`.
+- Added JWT creation and decoding with `PyJWT`.
+- Added auth routes:
+	- `POST /auth/register`
+	- `POST /auth/login`
+	- `GET /auth/me`
+- Added reusable auth dependency:
+	- `get_current_user`
+- Added automated tests for:
+	- user registration
+	- duplicate email handling
+	- hashed password storage
+	- login success
+	- login failure
+	- JWT token response
+	- `/auth/me` with and without token
+
+### Auth Flow
+
+1. User registers with email and password.
+2. Backend hashes the password before saving it.
+3. User logs in with email and password.
+4. Backend verifies the password against the stored hash.
+5. Backend returns a JWT access token.
+6. Protected routes can use the token to identify the current user.
+
+### Current Auth Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/auth/register` | Create a new user |
+| `POST` | `/auth/login` | Log in and receive a JWT |
+| `GET` | `/auth/me` | Return the current logged-in user |
+
 
 ## How to Run Locally
 

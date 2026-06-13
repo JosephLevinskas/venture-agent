@@ -287,4 +287,21 @@ without breaking the code/project
 - db.add() add to database or stage
 - db.commit() save the changes 
 - HTTPException lets your API return a real HTTP error.
-- 
+
+
+# Day 3
+
+# Authentication
+- A User model is the database version of an app user 
+- We use password hashing so that to hide passwords incase the database gets leaked 
+- POST /auth/register ; creates a new user 
+- POST /auth/login ; checks whether a user exists and password matches 
+- A JWT token proves who the user is when they send a request, instead of always sending a email and password 
+- unqiue=True means 2 users cannot register with the same email
+- pwdlib is used for password hashing with FastAPI 
+- never reverse/decode a hash
+- PasswordHash.recommended() sets up a good default hashing configuration 
+- hashpassword() gives hashed password 
+- verifypassword() returns bool if password matches hashed password 
+- A signed token means the backend creates the token using a secret key.
+- The frontend can hold the token, but it cannot safely fake a new one unless it knows the secret.

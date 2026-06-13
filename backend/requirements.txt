@@ -3,3 +3,7 @@ uvicorn # runs server for app
 sqlalchemy # lets python talk to sql database
 psycopg2-binary 
 python-dotenv # lets python read the .env file 
+pwdlib[argon2] # used for password hashing 
+PyJWT # for JWT tokens 
+httpx2 # required by starlette TestClient
+pytest # test runner
