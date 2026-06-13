@@ -4,9 +4,9 @@
 - VentureAgent is a full-stack AI research agent.
 - Users create research projects.
 - Projects can have documents/notes.
+- Current app has a working FastAPI backend and React frontend.
+- Users can register, log in, create projects, select projects, create notes/documents, and view document contents.
 - Later: chunk documents, create embeddings, search with RAG, generate research reports.
-- Current backend is ahead of frontend.
-- Frontend is still not built yet.
 
 # Current Stack
 - FastAPI = backend API framework.
@@ -23,6 +23,12 @@
 - Alembic = database migrations.
 - pytest = backend tests.
 - TestClient = tests FastAPI routes.
+- React = frontend UI library.
+- TypeScript = typed JavaScript for safer frontend code.
+- Vite = frontend dev server and build tool.
+- CSS = custom styling for the frontend.
+- npm = frontend package manager.
+- localStorage = browser storage currently used for JWT token.
 
 # Important Project Structure
 - backend/app/main.py = creates FastAPI app and includes routers.
@@ -41,6 +47,14 @@
 - docker-compose.yml = backend/Postgres services.
 - .env = real local config, do not commit.
 - .env.example = safe template, commit this.
+- frontend/package.json = frontend dependencies and npm scripts.
+- frontend/package-lock.json = exact frontend dependency versions.
+- frontend/src/main.tsx = React entry point.
+- frontend/src/App.tsx = main frontend UI and state logic.
+- frontend/src/App.css = main app styling.
+- frontend/src/index.css = global page styling.
+- frontend/vite.config.ts = Vite config.
+- frontend/node_modules/ = installed frontend packages, do not commit.
 
 # Day 1 Key Facts
 - Created backend, frontend, infra, docs folders.
@@ -366,15 +380,20 @@
 - relation documents does not exist = documents migration not applied.
 - route not in /docs = router not included in main.py.
 - ModuleNotFoundError for app = run with PYTHONPATH=backend.
+- CORS error in browser = backend probably missing CORSMiddleware or wrong allowed origin.
+- Failed to fetch = backend may not be running.
+- 401 or 403 from frontend = missing/invalid JWT token.
+- Register failed email already registered = account already exists, use Login instead.
+- Frontend looks unstyled = App.css or index.css may not be imported.
+- npm command not found = Node/npm not installed or terminal path issue.
 
 # Fixes
-- Start DB: docker compose up -d postgres.
-- Apply migrations: .venv/bin/alembic upgrade head.
-- Check current migration: .venv/bin/alembic current.
-- Check tables: docker compose exec postgres psql -U postgres -d venture_agent then \dt.
-- Run tests: PYTHONPATH=backend .venv/bin/pytest backend/tests -q.
-- Fix import path: use PYTHONPATH=backend.
-- If local dev DB is totally broken and data does not matter: docker compose down -v then docker compose up -d postgres then .venv/bin/alembic upgrade head.
+- Start DB: docker compose up -d postgres, alembic upgrade head, uvicorn.
+- Start frontend second: cd frontend then npm run dev.
+- If frontend cannot call backend, check backend is at http://127.0.0.1:8000.
+- If CORS fails, check main.py allows http://localhost:5173 and http://127.0.0.1:5173.
+- If UI is stale, refresh browser or restart npm run dev.
+- If auth acts weird, logout or clear localStorage access_token.
 
 # Implementation Rules To Remember
 - Keep .env out of Git.
@@ -391,24 +410,92 @@
 - Tests can still use create_all() on temporary SQLite.
 - Commit after each clean milestone.
 
-# Current Status
+## Current Status
+
 - Backend through Day 5 is working.
+- Frontend MVP is working.
 - Auth works.
 - User-owned projects work.
 - Alembic migrations work.
 - Documents/notes attached to projects work.
+- React frontend can register, login, create/list projects, select projects, create/list documents, and view document contents.
 - Tests pass.
-- React frontend is still pending.
-- Next catch-up task: React + TypeScript frontend MVP.
+- Next major task: chunking documents and preparing for embeddings/vector search.
 
-# Next Frontend MVP
-- Create React + TypeScript app in frontend.
-- Add CORS to FastAPI.
-- Register from frontend.
-- Login from frontend.
+# Next Main Task
+
+- Day 6: chunking + embeddings/vector storage.
+- Need to split document content into chunks.
+- Need a Chunk model/table.
+- Later each chunk will get an embedding.
+- Later RAG will search chunks and answer with evidence.
+
+# Frontend Key Facts
+
+- Frontend is built with Vite + React + TypeScript.
+- Vite runs the frontend at http://localhost:5173.
+- Backend runs at http://localhost:8000.
+- CORS lets the frontend call the backend from a different port.
+- App.tsx currently holds frontend state and API calls.
+- useState stores changing UI data like token, projects, selected project, documents, and messages.
+- useEffect loads projects after login/token changes.
+- fetch() sends HTTP requests from React to FastAPI.
+- localStorage stores the JWT token so refresh does not immediately log the user out.
+- Authorization header format is still: Authorization: Bearer <token>.
+- Frontend should not send owner_id.
+- Backend still decides ownership from the JWT.
+
+# Frontend Current Features
+
+- Register user from browser.
+- Login user from browser.
 - Store JWT token.
-- Create project.
+- Show login status.
+- Show success/error/info messages near the top.
+- Create projects.
 - List current user's projects.
-- Select project.
-- Create document/note under project.
+- Select a project.
+- Highlight selected project.
+- Create document/note under selected project.
 - List documents for selected project.
+- Select/view document.
+- Highlight selected document.
+- Show full document content in document viewer.
+
+# Frontend Commands
+
+- cd frontend = move into frontend folder.
+- npm install = install frontend dependencies.
+- npm run dev = start Vite dev server.
+- npm run build = create production frontend build.
+- npm run preview = preview production build locally.
+- Frontend URL: http://localhost:5173.
+
+# Frontend Files To Commit
+
+- frontend/package.json
+- frontend/package-lock.json
+- frontend/index.html
+- frontend/src/
+- frontend/public/
+- frontend/vite.config.ts
+- frontend/tsconfig.json
+- frontend/tsconfig.app.json
+- frontend/tsconfig.node.json
+- frontend/eslint.config.js
+- frontend/.gitignore
+
+# Frontend Files To Not Commit
+
+- frontend/node_modules/
+- frontend/dist/ unless intentionally deploying static build output.
+
+# Optional Frontend Cleanup Later
+
+- Move fetch/API logic out of App.tsx into frontend/src/api.ts.
+- Split UI into components like AuthPanel, ProjectList, DocumentList, DocumentViewer.
+- Add edit/delete buttons for projects and documents.
+- Add better loading states.
+- Add form clearing after successful create.
+
+```
