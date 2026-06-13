@@ -64,8 +64,10 @@ def test_health():
 
 
 def test_project_crud_flow():
-    # Start with empty list
-    r = client.get("/projects")
+    headers = get_auth_headers(client)
+
+    # Start with empty list for this logged-in user
+    r = client.get("/projects", headers=headers)
     assert r.status_code == 200
     assert r.json() == []
 
@@ -75,49 +77,56 @@ def test_project_crud_flow():
         "description": "a test",
     }
 
-    r = client.post("/projects", json=payload)
+    r = client.post("/projects", json=payload, headers=headers)
     assert r.status_code == 200
 
     created = r.json()
     assert created["title"] == payload["title"]
     assert created["description"] == payload["description"]
     assert "id" in created
+    assert "owner_id" in created
     assert "created_at" in created
     assert "updated_at" in created
 
     project_id = created["id"]
 
     # List contains created project
-    r = client.get("/projects")
+    r = client.get("/projects", headers=headers)
     assert r.status_code == 200
 
     projects = r.json()
     assert any(project["id"] == project_id for project in projects)
 
     # Get single project
-    r = client.get(f"/projects/{project_id}")
+    r = client.get(f"/projects/{project_id}", headers=headers)
     assert r.status_code == 200
 
     one = r.json()
     assert one["id"] == project_id
     assert one["title"] == payload["title"]
+    assert one["owner_id"] == created["owner_id"]
 
     # Patch project
-    r = client.patch(f"/projects/{project_id}", json={"title": "Updated"})
+    r = client.patch(
+        f"/projects/{project_id}",
+        json={"title": "Updated"},
+        headers=headers,
+    )
     assert r.status_code == 200
 
     updated = r.json()
     assert updated["id"] == project_id
     assert updated["title"] == "Updated"
     assert updated["description"] == payload["description"]
+    assert updated["owner_id"] == created["owner_id"]
 
     # Delete project
-    r = client.delete(f"/projects/{project_id}")
+    r = client.delete(f"/projects/{project_id}", headers=headers)
     assert r.status_code == 200
     assert r.json().get("message") == "Project deleted successfully"
 
     # Deleted project should return 404
-    r = client.get(f"/projects/{project_id}")
+    r = client.get(f"/projects/{project_id}", headers=headers)
     assert r.status_code == 404
 
 
@@ -262,3 +271,184 @@ def test_auth_me_without_token_fails():
 
     # FastAPI HTTPBearer may return 401 or 403 depending on version/config
     assert r.status_code in (401, 403)
+
+def get_auth_headers(client, email="projectowner@example.com"):
+    password = "testpassword123"
+
+    register_response = client.post(
+        "/auth/register",
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
+    assert register_response.status_code == 201
+
+    login_response = client.post(
+        "/auth/login",
+        json={
+            "email": email,
+            "password": password,
+        },
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}
+
+def test_list_projects_only_returns_current_users_projects():
+    user_one_headers = get_auth_headers(client, email="userone@example.com")
+    user_two_headers = get_auth_headers(client, email="usertwo@example.com")
+
+    user_one_project = client.post(
+        "/projects",
+        json={
+            "title": "User One Project",
+            "description": "belongs to user one",
+        },
+        headers=user_one_headers,
+    )
+    assert user_one_project.status_code == 200
+
+    user_two_project = client.post(
+        "/projects",
+        json={
+            "title": "User Two Project",
+            "description": "belongs to user two",
+        },
+        headers=user_two_headers,
+    )
+    assert user_two_project.status_code == 200
+
+    r = client.get("/projects", headers=user_one_headers)
+    assert r.status_code == 200
+
+    projects = r.json()
+
+    assert len(projects) == 1
+    assert projects[0]["title"] == "User One Project"
+
+def test_get_project_only_allows_owner():
+    owner_headers = get_auth_headers(client, email="owner@example.com")
+    other_user_headers = get_auth_headers(client, email="other@example.com")
+
+    create_response = client.post(
+        "/projects",
+        json={
+            "title": "Private Project",
+            "description": "Only owner should access this",
+        },
+        headers=owner_headers,
+    )
+    assert create_response.status_code == 200
+
+    project_id = create_response.json()["id"]
+
+    owner_response = client.get(
+        f"/projects/{project_id}",
+        headers=owner_headers,
+    )
+    assert owner_response.status_code == 200
+    assert owner_response.json()["title"] == "Private Project"
+
+    other_response = client.get(
+        f"/projects/{project_id}",
+        headers=other_user_headers,
+    )
+    assert other_response.status_code == 404
+    assert other_response.json()["detail"] == "Project not found"
+
+def test_update_project_only_allows_owner():
+    owner_headers = get_auth_headers(client, email="patchowner@example.com")
+    other_user_headers = get_auth_headers(client, email="patchother@example.com")
+
+    create_response = client.post(
+        "/projects",
+        json={
+            "title": "Owner Project",
+            "description": "original",
+        },
+        headers=owner_headers,
+    )
+    assert create_response.status_code == 200
+
+    project_id = create_response.json()["id"]
+
+    other_update = client.patch(
+        f"/projects/{project_id}",
+        json={"title": "Hacked Title"},
+        headers=other_user_headers,
+    )
+    assert other_update.status_code == 404
+    assert other_update.json()["detail"] == "Project not found"
+
+    owner_update = client.patch(
+        f"/projects/{project_id}",
+        json={"title": "Owner Updated Title"},
+        headers=owner_headers,
+    )
+    assert owner_update.status_code == 200
+    assert owner_update.json()["title"] == "Owner Updated Title"
+
+def test_delete_project_only_allows_owner():
+    owner_headers = get_auth_headers(client, email="deleteowner@example.com")
+    other_user_headers = get_auth_headers(client, email="deleteother@example.com")
+
+    create_response = client.post(
+        "/projects",
+        json={
+            "title": "Delete Test Project",
+            "description": "Only owner can delete this",
+        },
+        headers=owner_headers,
+    )
+    assert create_response.status_code == 200
+
+    project_id = create_response.json()["id"]
+
+    other_delete = client.delete(
+        f"/projects/{project_id}",
+        headers=other_user_headers,
+    )
+    assert other_delete.status_code == 404
+    assert other_delete.json()["detail"] == "Project not found"
+
+    owner_delete = client.delete(
+        f"/projects/{project_id}",
+        headers=owner_headers,
+    )
+    assert owner_delete.status_code == 200
+    assert owner_delete.json()["message"] == "Project deleted successfully"
+
+    owner_get_after_delete = client.get(
+        f"/projects/{project_id}",
+        headers=owner_headers,
+    )
+    assert owner_get_after_delete.status_code == 404
+
+def test_project_routes_require_authentication():
+    create_response = client.post(
+        "/projects",
+        json={
+            "title": "No Auth Project",
+            "description": "should fail",
+        },
+    )
+    assert create_response.status_code in (401, 403)
+
+    list_response = client.get("/projects")
+    assert list_response.status_code in (401, 403)
+
+    get_response = client.get("/projects/1")
+    assert get_response.status_code in (401, 403)
+
+    patch_response = client.patch(
+        "/projects/1",
+        json={"title": "Should Fail"},
+    )
+    assert patch_response.status_code in (401, 403)
+
+    delete_response = client.delete("/projects/1")
+    assert delete_response.status_code in (401, 403)
+
